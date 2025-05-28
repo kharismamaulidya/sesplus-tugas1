@@ -1,21 +1,43 @@
 import { useEffect, useState } from "react";
 import Link from 'next/link';
+import { getBooks, deleteBook as apiDeleteBook } from '../../../lib/api/books';
 
 export default function BookList() {
   const [books, setBooks] = useState([]);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("title");
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/books')
-      .then(res => res.json())
-      .then(data => setBooks(data));
+    async function fetchData() {
+      try {
+        const data = await getBooks();
+        setBooks(data);
+      } catch (err) {
+        setError(err.message);
+      }
+    }
+
+    fetchData();
   }, []);
 
   const deleteBook = async (id) => {
-    await fetch(`http://localhost:3000/api/books/${id}`, {
-      method: 'DELETE',
-    });
-    setBooks(books.filter(b => b.id !== id));
+    try {
+      await apiDeleteBook(id);
+      setBooks((prevBooks) => prevBooks.filter((b) => b.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
   };
+
+  const filteredBooks = [...books]
+    .filter((b) =>
+      b.title.toLowerCase().includes(search.toLowerCase()) ||
+      b.author.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => a[sort].localeCompare(b[sort]));
+
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div
@@ -27,12 +49,30 @@ export default function BookList() {
       <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-md">Daftar Buku</h1>
       <div className="h-1 bg-white mb-6 w-full max-w-xs"></div>
 
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <input
+          type="text"
+          placeholder="Cari judul atau penulis..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-4 py-2 border rounded-md w-full sm:w-1/2"
+        />
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+          className="px-4 py-2 border rounded-md w-full sm:w-1/4"
+        >
+          <option value="title">Urutkan: Judul (A-Z)</option>
+          <option value="author">Urutkan: Penulis (A-Z)</option>
+        </select>
+      </div>
+
       <Link href="/books/add" className="block w-full max-w-xs text-center bg-[#db88a4] hover:bg-[#cc8eb1] text-white font-bold py-4 rounded-2xl text-xl mb-10 transition duration-300 shadow-lg">
         Tambah Buku
       </Link>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {books.map((b) => (
+        {filteredBooks.map((b) => (
           <div key={b.id} className="bg-white rounded-2xl shadow-lg p-6 flex flex-col justify-between border border-[#f2cde7]">
             <h2 className="text-xl text-[#db88a4] font-bold mb-2">{b.title}</h2>
             <hr className="border-[#eec6c7] mb-2" />

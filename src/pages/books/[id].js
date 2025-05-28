@@ -1,11 +1,28 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import BookFrom from '../../components/BookFrom';
+import { getBook } from '../../../lib/api/books';
 
 export default function EditBook() {
   const router = useRouter();
   const { id } = router.query;
   const [book, setBook] = useState(null);
+  const[Error, setError] = useState(null);
+
+useEffect(() => {
+  if (!id) return;
+  async function fetchBook() {
+    try {
+      const data = await getBook(id);
+      setBook(data);
+    } catch ( err) {
+      setError('Gagal memuat data buku');
+  }
+    }
+    
+    fetchBook();
+  }, [id]);
+
 
   const _getBookById = async () => {
     if (id) {
